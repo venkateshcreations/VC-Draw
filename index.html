@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VC-Draw — Create. Connect. Visualize. | Offline Diagramming &amp; Whiteboard Suite</title>
+  <meta name="description" content="VC-Draw is a professional, 100% offline Windows desktop diagramming and visual collaboration suite powered by Electron, React 19, and maxGraph. Created by Venkatesh Ammireddy.">
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            paper: {
+              50: '#ffffff',
+              100: '#f8fafc',
+              200: '#f1f5f9',
+              300: '#e2e8f0',
+            },
+            ink: {
+              900: '#0f172a',
+              800: '#1e293b',
+              600: '#475569',
+              500: '#64748b',
+              400: '#94a3b8',
+            },
+            vc: {
+              blue: '#2563eb',
+              indigo: '#4f46e5',
+              sky: '#0284c7',
+              emerald: '#059669',
+              amber: '#d97706',
+              rose: '#e11d48',
+            }
+          },
+          animation: {
+            'float-slow': 'floatSlow 9s ease-in-out infinite',
+            'float-reverse': 'floatReverse 11s ease-in-out infinite',
+            'pulse-soft': 'pulseSoft 5s ease-in-out infinite',
+            'dash-flow': 'dashFlow 28s linear infinite',
+            'shimmer-sweep': 'shimmerSweep 3s ease-in-out infinite',
+            'badge-bounce': 'badgeBounce 3.2s ease-in-out infinite',
+          },
+          keyframes: {
+            floatSlow: {
+              '0%, 100%': { transform: 'translate3d(0, 0, 0)' },
+              '50%': { transform: 'translate3d(0, -14px, 0)' },
+            },
+            floatReverse: {
+              '0%, 100%': { transform: 'translate3d(0, 0, 0)' },
+              '50%': { transform: 'translate3d(0, 12px, 0)' },
+            },
+            pulseSoft: {
+              '0%, 100%': { opacity: '0.5', transform: 'scale(1)' },
+              '50%': { opacity: '0.85', transform: 'scale(1.05)' },
+            },
+            dashFlow: {
+              '0%': { strokeDashoffset: '480' },
+              '100%': { strokeDashoffset: '0' },
+            },
+            shimmerSweep: {
+              '0%': { transform: 'translateX(-120%) skewX(-18deg)' },
+              '60%, 100%': { transform: 'translateX(220%) skewX(-18deg)' },
+            },
+            badgeBounce: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-4px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg-canvas: #f8fafc;
+      --surface-card: rgba(255, 255, 255, 0.86);
+      --border-hairline: rgba(15, 23, 42, 0.08);
+      --accent-blue: #2563eb;
+      --accent-indigo: #4f46e5;
+      --accent-sky: #0284c7;
+    }
+
+    html, body {
+      overflow-x: clip;
+      background-color: var(--bg-canvas);
+      color: #0f172a;
+    }
+
+    /* VC-Draw Signature Dot-Grid Canvas Pattern (Light Studio) */
+    .bg-studio-dots {
+      background-color: #f8fafc;
+      background-image:
+        radial-gradient(rgba(37, 99, 235, 0.13) 1.15px, transparent 1.15px),
+        linear-gradient(to right, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(15, 23, 42, 0.025) 1px, transparent 1px);
+      background-size: 24px 24px, 96px 96px, 96px 96px;
+    }
+
+    /* Light Frosted Architectural Cards */
+    .studio-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border-hairline);
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 12px 32px -12px rgba(15, 23, 42, 0.08);
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+                  box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+                  border-color 0.25s ease;
+    }
+
+    .studio-card:hover {
+      border-color: rgba(37, 99, 235, 0.28);
+      box-shadow:
+        0 4px 12px rgba(37, 99, 235, 0.06),
+        0 24px 48px -16px rgba(37, 99, 235, 0.16);
+    }
+
+    /* Soft Daylight Ambient Glows */
+    .aura-blue {
+      background: radial-gradient(circle, rgba(37, 99, 235, 0.11) 0%, rgba(255, 255, 255, 0) 70%);
+    }
+    .aura-indigo {
+      background: radial-gradient(circle, rgba(79, 70, 229, 0.10) 0%, rgba(255, 255, 255, 0) 70%);
+    }
+    .aura-sky {
+      background: radial-gradient(circle, rgba(14, 165, 233, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
+    }
+    .aura-emerald {
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.09) 0%, rgba(255, 255, 255, 0) 70%);
+    }
+
+    /* Primary Button Shimmer */
+    .btn-primary-shimmer {
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary-shimmer::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      width: 45%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+      transform: translateX(-140%) skewX(-18deg);
+      animation: shimmerSweep 3.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    /* Scroll Reveal Animations */
+    .reveal-item {
+      opacity: 0;
+      transform: translate3d(0, 24px, 0) scale(0.985);
+      transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: opacity, transform;
+    }
+    .reveal-item.is-visible {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    /* Hero Entrance Animation */
+    .hero-enter {
+      animation: heroFadeUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .hero-enter-delay-1 { animation-delay: 0.08s; }
+    .hero-enter-delay-2 { animation-delay: 0.16s; }
+    .hero-enter-delay-3 { animation-delay: 0.24s; }
+    .hero-enter-delay-4 { animation-delay: 0.34s; }
+
+    @keyframes heroFadeUp {
+      from {
+        opacity: 0;
+        transform: translate3d(0, 22px, 0);
+      }
+      to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+      }
+    }
+
+    /* Tab Panel Crossfade */
+    .tab-panel-animate {
+      animation: tabFadeSlide 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes tabFadeSlide {
+      from {
+        opacity: 0;
+        transform: translate3d(0, 10px, 0) scale(0.992);
+      }
+      to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+    }
+
+    /* Animated SVG Connector Wires */
+    .svg-wire-flow {
+      stroke-dasharray: 8 8;
+      animation: dashFlow 22s linear infinite;
+    }
+
+    /* Interactive Keycap Press */
+    .shortcut-row:hover kbd {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 0 #cbd5e1, 0 8px 16px -4px rgba(37, 99, 235, 0.2);
+      border-color: rgba(37, 99, 235, 0.4);
+      color: #1d4ed8;
+    }
+    .shortcut-row:active kbd {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 #cbd5e1;
+    }
+    .shortcut-row kbd {
+      box-shadow: 0 2px 0 #cbd5e1;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+    }
+
+    /* Scroll Progress Bar */
+    #scroll-progress {
+      transform-origin: left center;
+      transform: scaleX(0);
+    }
+
+    /* Lightbox Entrance */
+    .modal-pop {
+      animation: modalPop 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes modalPop {
+      from {
+        opacity: 0;
+        transform: scale(0.95) translate3d(0, 8px, 0);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translate3d(0, 0, 0);
+      }
+    }
+
+    /* Focus Rings */
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+
+    /* Custom Scrollbar (Light) */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2563eb; }
+
+    /* Respect Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .reveal-item {
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body id="top" class="bg-studio-dots text-ink-900 font-sans selection:bg-blue-600 selection:text-white relative antialiased">
+
+  <!-- Top Reading Progress Line -->
+  <div class="fixed top-0 left-0 right-0 h-[3px] z-[60] bg-slate-200/60 pointer-events-none">
+    <div id="scroll-progress" class="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500"></div>
+  </div>
+
+  <!-- Soft Daylight Ambient Glows -->
+  <div class="fixed -top-24 left-1/4 w-[760px] h-[760px] aura-blue rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-soft"></div>
+  <div class="fixed top-1/4 -right-24 w-[680px] h-[680px] aura-sky rounded-full blur-3xl pointer-events-none -z-10 animate-float-slow"></div>
+  <div class="fixed bottom-0 -left-24 w-[620px] h-[620px] aura-indigo rounded-full blur-3xl pointer-events-none -z-10 animate-float-reverse"></div>
+  <div class="fixed bottom-1/3 right-1/4 w-[520px] h-[520px] aura-emerald rounded-full blur-3xl pointer-events-none -z-10"></div>
+
+  <!-- 1. Floating Capsule Header (Light Glass) -->
+  <header class="fixed top-4 left-0 right-0 z-50 px-4 sm:px-6 pointer-events-none">
+    <div id="navbar-capsule" class="max-w-6xl mx-auto flex items-center justify-between pointer-events-auto px-4 py-2.5 rounded-full bg-white/85 backdrop-blur-2xl border border-slate-200/90 shadow-[0_10px_35px_-10px_rgba(15,23,42,0.12)] transition-all duration-300">
+
+      <!-- Brand Logo & Wordmark -->
+      <a href="#top" class="flex items-center gap-2.5 group shrink-0">
+        <div class="w-8 h-8 rounded-xl shadow-md shadow-blue-600/20 group-hover:scale-105 transition-transform overflow-hidden">
+          <img src="images/favicon.svg" alt="VC-Draw Logo" class="w-full h-full object-cover">
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-sm font-extrabold tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
+            VC-Draw
+          </span>
+          <span class="hidden sm:inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/90">
+            In Testing
+          </span>
+        </div>
+      </a>
+
+      <!-- Center Nav Links -->
+      <nav aria-label="Primary navigation" class="hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-full border border-slate-200/70 text-xs font-semibold text-slate-600">
+        <a href="#features" class="px-3.5 py-1.5 rounded-full hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all">Features</a>
+        <a href="#showcase" class="px-3.5 py-1.5 rounded-full hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all">Interface Tour</a>
+        <a href="#interop" class="px-3.5 py-1.5 rounded-full hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all">Import &amp; Export</a>
+        <a href="#shortcuts" class="px-3.5 py-1.5 rounded-full hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all">Shortcuts</a>
+        <a href="#creator" class="px-3.5 py-1.5 rounded-full hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all">Creator</a>
+      </nav>
+
+      <!-- Right Action Controls -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="showReleaseModal('GitHub Repository')"
+           class="p-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all flex items-center justify-center cursor-pointer"
+           title="GitHub Repository (Coming Soon)">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+        </button>
+
+        <button onclick="showReleaseModal('Windows Desktop Build (NSIS &amp; Portable)')"
+           class="btn-primary-shimmer flex items-center gap-2 pl-3.5 pr-2 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 text-white shadow-md shadow-blue-600/25 hover:shadow-lg hover:shadow-blue-600/35 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer">
+          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+          </svg>
+          <span>Windows</span>
+          <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-white/20 text-white border border-white/25">Coming Soon</span>
+        </button>
+
+        <button onclick="toggleMobileMenu()" class="md:hidden p-1.5 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Toggle Navigation Menu">
+          <svg id="hamburger-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+          <svg id="close-nav-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Mobile Drawer -->
+    <div id="mobile-menu" class="hidden md:hidden max-w-6xl mx-auto mt-2 p-4 rounded-2xl bg-white/95 backdrop-blur-2xl border border-slate-200 shadow-2xl">
+      <div class="flex flex-col gap-2 text-xs font-semibold text-slate-700">
+        <a href="#features" onclick="toggleMobileMenu()" class="px-3 py-2.5 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors">Features</a>
+        <a href="#showcase" onclick="toggleMobileMenu()" class="px-3 py-2.5 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors">Interface Tour</a>
+        <a href="#interop" onclick="toggleMobileMenu()" class="px-3 py-2.5 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors">Import &amp; Export</a>
+        <a href="#shortcuts" onclick="toggleMobileMenu()" class="px-3 py-2.5 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors">Shortcuts</a>
+        <a href="#creator" onclick="toggleMobileMenu()" class="px-3 py-2.5 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors">Creator</a>
+        <div class="pt-2 border-t border-slate-200 flex items-center justify-between">
+          <a href="https://venkateshcreations.github.io/portfolio/" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 text-blue-600 font-bold">
+            Creator Portfolio
+          </a>
+          <span class="text-[11px] font-mono text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">In Testing · Coming Soon</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. Hero Section (Light Architectural Studio + Animated Diagram Wires) -->
+  <section class="pt-28 sm:pt-36 pb-20 px-6 relative overflow-hidden">
+
+    <!-- Subtle Animated SVG Node-Connector Backdrop -->
+    <svg class="absolute inset-x-0 top-14 w-full h-[520px] pointer-events-none opacity-45 -z-10" viewBox="0 0 1440 520" fill="none" aria-hidden="true">
+      <path d="M-40 160 C 220 160, 260 320, 520 320 C 780 320, 820 110, 1140 110 C 1280 110, 1380 210, 1500 210"
+            stroke="#93c5fd" stroke-width="1.75" class="svg-wire-flow"/>
+      <path d="M-40 370 C 180 370, 320 210, 620 210 C 890 210, 980 390, 1260 390 C 1360 390, 1420 340, 1500 340"
+            stroke="#c7d2fe" stroke-width="1.5" class="svg-wire-flow" style="animation-direction: reverse; animation-duration: 30s;"/>
+      <!-- Floating Vector Anchor Nodes -->
+      <rect x="210" y="148" width="12" height="12" rx="3" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+      <circle cx="520" cy="320" r="6" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+      <rect x="1134" y="104" width="12" height="12" rx="3" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+      <circle cx="620" cy="210" r="5" fill="#ffffff" stroke="#059669" stroke-width="2"/>
+    </svg>
+
+    <div class="max-w-6xl mx-auto text-center flex flex-col items-center">
+
+      <!-- Announcement Badge -->
+      <div class="hero-enter inline-flex flex-wrap items-center justify-center gap-2.5 px-4 py-1.5 rounded-full bg-white/90 border border-amber-200/90 text-slate-700 text-xs font-semibold mb-6 shadow-sm backdrop-blur-md">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+        </span>
+        <span>Currently Under Testing · Public Windows Release Coming Soon</span>
+      </div>
+
+      <!-- Main Display Headline -->
+      <h1 class="hero-enter hero-enter-delay-1 text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.06] max-w-5xl text-slate-900">
+        Create. Connect. <br class="hidden sm:inline">
+        <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 bg-clip-text text-transparent">
+          Visualize Everything Offline.
+        </span>
+      </h1>
+
+      <!-- Subheadline -->
+      <p class="hero-enter hero-enter-delay-2 mt-6 text-base sm:text-lg text-slate-600 max-w-2xl font-normal leading-relaxed">
+        An independent open-source Windows desktop alternative to diagrams.net powered by <strong class="font-semibold text-slate-800">maxGraph</strong>, <strong class="font-semibold text-slate-800">React 19</strong>, and <strong class="font-semibold text-slate-800">Electron 34</strong>—combining precision engineering diagrams, freehand whiteboarding, and 36 shape libraries with zero telemetry.
+      </p>
+
+      <!-- Hero CTA Buttons -->
+      <div class="hero-enter hero-enter-delay-3 mt-8 flex flex-wrap items-center justify-center gap-4">
+        <button onclick="showReleaseModal('VC-Draw v1.0.0 for Windows x64')"
+           class="btn-primary-shimmer px-7 py-3.5 rounded-full text-sm font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 text-white shadow-xl shadow-blue-600/25 hover:shadow-2xl hover:shadow-blue-600/35 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center gap-2.5 cursor-pointer">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+          </svg>
+          <span>Download VC-Draw (Windows)</span>
+          <span class="text-[10px] uppercase font-mono px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/25">Coming Soon</span>
+        </button>
+
+        <button onclick="showReleaseModal('GitHub Source &amp; Release')"
+           class="px-6 py-3.5 rounded-full text-sm font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2.5 cursor-pointer">
+          <svg class="w-4 h-4 fill-current text-slate-700" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span>GitHub Release</span>
+          <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Coming Soon</span>
+        </button>
+
+        <a href="#showcase"
+           class="px-6 py-3.5 rounded-full text-sm font-bold bg-slate-100 hover:bg-slate-200/70 text-slate-800 border border-slate-200 transition-all flex items-center gap-2 cursor-pointer">
+          <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          <span>Explore Screenshots</span>
+        </a>
+      </div>
+
+      <!-- Quick Capabilities Bar -->
+      <div class="hero-enter hero-enter-delay-3 mt-9 flex flex-wrap items-center justify-center gap-5 sm:gap-9 text-xs font-medium text-slate-600">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">✓</span>
+          <span>100% Offline &amp; Zero Telemetry</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">✓</span>
+          <span>36 Shape Libraries + Scratchpad</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">✓</span>
+          <span>Diagram + Whiteboard Mode</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold">✓</span>
+          <span>draw.io XML &amp; Mermaid Import</span>
+        </div>
+      </div>
+
+      <!-- Hero Showcase: Live Windows App Screenshot with Subtle Perspective & Floating Callouts -->
+      <div class="hero-enter hero-enter-delay-4 mt-14 w-full relative">
+        <!-- Soft Chromatic Halo -->
+        <div class="absolute -inset-3 bg-gradient-to-r from-blue-500/15 via-indigo-500/15 to-sky-400/15 rounded-[28px] blur-2xl pointer-events-none"></div>
+
+        <!-- Floating Status Pill Top-Right -->
+        <div class="hidden lg:flex absolute -top-4 -right-3 z-20 items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg animate-badge-bounce">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <span class="text-xs font-bold text-slate-800">maxGraph Core</span>
+          <span class="text-[11px] font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">10%–500% Zoom</span>
+        </div>
+
+        <!-- Floating Mode Pill Bottom-Left -->
+        <div class="hidden lg:flex absolute -bottom-4 -left-3 z-20 items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg animate-float-slow">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xs font-bold">
+            36
+          </div>
+          <div class="text-left">
+            <div class="text-xs font-bold text-slate-900">Built-in Shape Libraries</div>
+            <div class="text-[11px] text-slate-500">AWS · Azure · GCP · UML · BPMN</div>
+          </div>
+        </div>
+
+        <div id="hero-frame" class="relative rounded-2xl overflow-hidden border border-slate-200/90 shadow-[0_24px_70px_-15px_rgba(15,23,42,0.18)] bg-white transition-transform duration-300 ease-out">
+          <div class="relative group cursor-pointer" onclick="openLightboxByIndex(0)">
+            <img src="images/img-1.png" alt="VC-Draw Windows Desktop Application — Cloud Microservices Architecture Canvas" class="w-full h-auto block">
+            <div class="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span class="px-5 py-2.5 rounded-full bg-white/95 text-blue-700 text-xs font-bold backdrop-blur-md border border-blue-200 shadow-xl flex items-center gap-2 transform group-hover:scale-105 transition-transform">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                Click to inspect full-resolution workspace
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 3. Core Capabilities Grid (6 Pillars from README.md) -->
+  <section id="features" class="scroll-mt-24 py-20 px-6 border-t border-slate-200/80 bg-white/60 backdrop-blur-sm relative">
+    <div class="max-w-6xl mx-auto">
+
+      <div class="text-center max-w-2xl mx-auto mb-14 reveal-item">
+        <span class="inline-block text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200/70 px-3 py-1 rounded-full mb-3">
+          Core Capabilities
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          Engineered for Precision Diagramming &amp; Visual Collaboration
+        </h2>
+        <p class="text-sm sm:text-base text-slate-600 mt-3">
+          Every tool needed by software architects, systems engineers, and product designers—running natively offline on Windows.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Card 1: maxGraph Vector Engine -->
+        <div class="studio-card tilt-card rounded-3xl p-6 flex flex-col justify-between reveal-item" style="transition-delay: 40ms;">
+          <div>
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-2.5 flex items-center justify-center shadow-lg shadow-blue-500/20 mb-5">
+              <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">maxGraph Vector Engine</h3>
+            <span class="inline-block px-2.5 py-0.5 rounded-full bg-blue-50 text-[11px] font-mono text-blue-700 mt-1.5 border border-blue-200/70">10% to 500% Smooth Zoom</span>
+            <p class="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+              Direct <code class="font-mono text-blue-700 bg-blue-50 px-1 rounded">@maxgraph/core</code> integration with infinite pan, pixel/metric rulers, snap-to-grid, 8-point resize handles, and smart connectors that stay anchored as shapes move.
+            </p>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+            <span>Connectors</span>
+            <span class="text-blue-600 font-semibold">Straight · Elbow · Curved · ER</span>
+          </div>
+        </div>
+
+        <!-- Card 2: 36 Built-in Shape Libraries -->
+        <div class="studio-card tilt-card rounded-3xl p-6 flex flex-col justify-between reveal-item" style="transition-delay: 90ms;">
+          <div>
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 p-2.5 flex items-center justify-center shadow-lg shadow-sky-500/20 mb-5">
+              <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">36 Built-in Shape Libraries</h3>
+            <span class="inline-block px-2.5 py-0.5 rounded-full bg-sky-50 text-[11px] font-mono text-sky-700 mt-1.5 border border-sky-200/70">Searchable + Custom + Scratchpad</span>
+            <p class="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+              Includes Flowcharts, UML 2.5, BPMN 2.0, ER Diagrams, AWS, Azure, Google Cloud, Kubernetes, Docker, Networking, UI Wireframes, plus personal Scratchpad libraries.
+            </p>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+            <span>Architecture</span>
+            <span class="text-sky-700 font-semibold">Cloud · DevOps · Hardware</span>
+          </div>
+        </div>
+
+        <!-- Card 3: Dual Diagram & Whiteboard Mode -->
+        <div class="studio-card tilt-card rounded-3xl p-6 flex flex-col justify-between reveal-item" style="transition-delay: 140ms;">
+          <div>
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 flex items-center justify-center shadow-lg shadow-indigo-500/20 mb-5">
+              <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Diagram &amp; Whiteboard Modes</h3>
+            <span class="inline-block px-2.5 py-0.5 rounded-full bg-indigo-50 text-[11px] font-mono text-indigo-700 mt-1.5 border border-indigo-200/70">One-Click Canvas Switch</span>
+            <p class="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+              Switch effortlessly between structured technical diagramming and freehand ideation with pen, highlighter, eraser, stroke weights (2px/4px/8px), and color-coded sticky notes.
+            </p>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+            <span>Collaboration</span>
+            <span class="text-indigo-700 font-semibold">Sticky Notes · Freehand Ink</span>
+          </div>
+        </div>
+
+        <!-- Card 4: 5 Automatic Layouts & Multi-Page -->
+        <div class="studio-card tilt-card rounded-3xl p-6 flex flex-col justify-between reveal-item" style="transition-delay: 190ms;">
+          <div>
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-2.5 flex items-center justify-center shadow-lg shadow-amber-500/20 mb-5">
+              <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <rect x="3" y="3" width="7" height="7" rx="1.5" stroke-width="2"/>
+                <rect x="14" y="3" width="7" height="7" rx="1.5" stroke-width="2"/>
+                <rect x="8.5" y="14" width="7" height="7" rx="1.5" stroke-width="2"/>
+                <path stroke-linecap="round" stroke-width="2" d="M6.5 10v2h11v-2M12 12v2"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Auto Layout, Pages &amp; Layers</h3>
+            <span class="inline-block px-2.5 py-0.5 rounded-full bg-amber-50 text-[11px] font-mono text-amber-700 mt-1.5 border border-amber-200/70">5 Graph Layout Engines</span>
+            <p class="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+              Reorganize complex graphs instantly using Hierarchical, Compact Tree, Circular Ring, Radial, or Organic Force-Directed algorithms across multi-page tabs and lockable layers.
+            </p>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+            <span>Workspace</span>
+            <span class="text-amber-700 font-semibold">Multi-Page · Layer Lock</span>
+          </div>
+        </div>
+
+        <!-- Card 5: Vector Styling & Typography -->
+        <div class="studio-card tilt-card rounded-3xl p-6 flex flex-col justify-between reveal-item" style="transition-delay: 240ms;">
+          <div>
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 p-2.5 flex items-center justify-center shadow-lg shadow-rose-500/20 mb-5">
+              <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Styling, Typography &amp; Arrange</h3>
+            <span class="inline-block px-2.5 py-0.5 rounded-full bg-rose-50 text-[11px] font-mono text-rose-700 mt-1.5 border border-rose-200/70">Gradients · Shadows · Align</span>
+            <p class="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+              Full right-hand inspector for gradient fills, dashed strokes, opacity, corner radius, drop shadows, typography (8–72px), smart alignment, distribution, and group/ungroup controls.
+            </p>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+            <span>Precision</span>
+            <span class="text-rose-700 font-semibold">Z-Order · Group · Distribute</span>
+          </div>
+        </div>
+
+        <!-- Card 6: Strict Offline Privacy & IPC Storage -->
+        <div class="studio-card tilt-card rounded-3xl p-6 flex flex-col justify-between reveal-item" style="transition-delay: 290ms;">
+          <div>
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-2.5 flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-5">
+              <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">100% Offline Security</h3>
+            <span class="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 text-[11px] font-mono text-emerald-700 mt-1.5 border border-emerald-200/70">Zero Cloud · Zero Telemetry</span>
+            <p class="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+              Runs completely air-gapped with zero tracking, analytics, or third-party CDNs. Uses Electron context isolation and atomic local filesystem writes via secure IPC bridges.
+            </p>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+            <span>Storage</span>
+            <span class="text-emerald-700 font-semibold">Atomic Local .vcdraw</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Interactive Interface Tour (All 5 Real Windows App Screenshots) -->
+  <section id="showcase" class="scroll-mt-24 py-20 px-6 border-t border-slate-200/80 relative">
+    <div class="max-w-6xl mx-auto">
+
+      <div class="text-center max-w-2xl mx-auto mb-10 reveal-item">
+        <span class="inline-block text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200/70 px-3 py-1 rounded-full mb-3">
+          Interface Tour
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          Explore the Native Windows Workspace
+        </h2>
+        <p class="text-sm sm:text-base text-slate-600 mt-3">
+          Step through real screenshots of VC-Draw in action—from cloud microservices diagrams to freehand whiteboarding.
+        </p>
+      </div>
+
+      <!-- Interactive Tabs -->
+      <div class="flex flex-wrap items-center justify-center gap-2 mb-8 reveal-item" id="gallery-tabs" role="tablist" aria-label="VC-Draw Interface Views">
+        <button onclick="switchTab('architecture')" id="tab-architecture" role="tab" aria-selected="true"
+          class="tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25 cursor-pointer">
+          1. Cloud Architecture
+        </button>
+
+        <button onclick="switchTab('whiteboard')" id="tab-whiteboard" role="tab" aria-selected="false"
+          class="tab-btn px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer">
+          2. Whiteboard &amp; Sticky Notes
+        </button>
+
+        <button onclick="switchTab('flowchart')" id="tab-flowchart" role="tab" aria-selected="false"
+          class="tab-btn px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer">
+          3. Flowchart &amp; 36 Libraries
+        </button>
+
+        <button onclick="switchTab('templates')" id="tab-templates" role="tab" aria-selected="false"
+          class="tab-btn px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer">
+          4. Template Gallery
+        </button>
+
+        <button onclick="switchTab('welcome')" id="tab-welcome" role="tab" aria-selected="false"
+          class="tab-btn px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer">
+          5. Offline Quick Start
+        </button>
+      </div>
+
+      <!-- Active Showcase Container -->
+      <div class="studio-card rounded-3xl p-4 sm:p-6 relative overflow-hidden reveal-item">
+
+        <!-- Tab 1: Cloud Architecture (img-1.png) -->
+        <div id="content-architecture" class="tab-content block tab-panel-animate">
+          <div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-inner group relative cursor-pointer" onclick="openLightboxByIndex(0)">
+            <img src="images/img-1.png" alt="VC-Draw Cloud Microservices Architecture Diagram" class="w-full h-auto block">
+            <div class="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span class="px-4 py-2 rounded-full bg-white/95 text-blue-700 text-xs font-bold backdrop-blur-md border border-blue-200 shadow-lg">
+                Click to zoom full resolution
+              </span>
+            </div>
+          </div>
+          <div class="mt-5 flex flex-wrap items-center justify-between gap-4 text-xs">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">maxGraph Studio</span>
+              <span class="text-slate-700 font-medium">Live microservices diagram with anchored orthogonal connectors, quick-add shape dock, and Navigator minimap</span>
+            </div>
+            <div class="text-slate-500 font-mono">
+              Inspector: <span class="text-blue-600 font-semibold">Style · Text · Arrange · Props</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Whiteboard & Sticky Notes (img-5.png) -->
+        <div id="content-whiteboard" class="tab-content hidden">
+          <div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-inner group relative cursor-pointer" onclick="openLightboxByIndex(1)">
+            <img src="images/img-5.png" alt="VC-Draw Whiteboard Mode with Sticky Notes and Freehand Ink" class="w-full h-auto block">
+            <div class="absolute inset-0 bg-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span class="px-4 py-2 rounded-full bg-white/95 text-indigo-700 text-xs font-bold backdrop-blur-md border border-indigo-200 shadow-lg">
+                Click to zoom full resolution
+              </span>
+            </div>
+          </div>
+          <div class="mt-5 flex flex-wrap items-center justify-between gap-4 text-xs">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">Whiteboard Mode</span>
+              <span class="text-slate-700 font-medium">Instant canvas switch for brainstorming with color-coded sticky notes, pen, highlighter, eraser, and custom stroke sizes</span>
+            </div>
+            <div class="text-slate-500 font-mono">
+              Ink Widths: <span class="text-indigo-600 font-semibold">2px · 4px · 8px + 5 Note Colors</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Flowchart & Shape Libraries (img-2.png) -->
+        <div id="content-flowchart" class="tab-content hidden">
+          <div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-inner group relative cursor-pointer" onclick="openLightboxByIndex(2)">
+            <img src="images/img-2.png" alt="VC-Draw Basic Flowchart Template and 36 Shape Categories" class="w-full h-auto block">
+            <div class="absolute inset-0 bg-sky-600/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span class="px-4 py-2 rounded-full bg-white/95 text-sky-700 text-xs font-bold backdrop-blur-md border border-sky-200 shadow-lg">
+                Click to zoom full resolution
+              </span>
+            </div>
+          </div>
+          <div class="mt-5 flex flex-wrap items-center justify-between gap-4 text-xs">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="px-3 py-1 rounded-full bg-sky-50 text-sky-700 font-bold border border-sky-200">36 Libraries &amp; Menus</span>
+              <span class="text-slate-700 font-medium">Native desktop File menu, searchable AWS/Azure/GCP/DevOps/Cybersecurity/UI Wireframe shapes, and page setup</span>
+            </div>
+            <div class="text-slate-500 font-mono">
+              Page Setup: <span class="text-sky-700 font-semibold">A4 · Landscape / Portrait · Grid</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Template Gallery (img-4.png) -->
+        <div id="content-templates" class="tab-content hidden">
+          <div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-inner group relative cursor-pointer" onclick="openLightboxByIndex(3)">
+            <img src="images/img-4.png" alt="VC-Draw Diagram Template Gallery Dialog" class="w-full h-auto block">
+            <div class="absolute inset-0 bg-emerald-600/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span class="px-4 py-2 rounded-full bg-white/95 text-emerald-700 text-xs font-bold backdrop-blur-md border border-emerald-200 shadow-lg">
+                Click to zoom full resolution
+              </span>
+            </div>
+          </div>
+          <div class="mt-5 flex flex-wrap items-center justify-between gap-4 text-xs">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">Template Gallery</span>
+              <span class="text-slate-700 font-medium">Jumpstart projects with pre-built Basic Flowchart, Cloud Microservices Architecture, and Mind Map templates</span>
+            </div>
+            <div class="text-slate-500 font-mono">
+              Categories: <span class="text-emerald-700 font-semibold">Flowchart · Architecture · Mind Map</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 5: Welcome & Quick Start (img-0.png) -->
+        <div id="content-welcome" class="tab-content hidden">
+          <div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-inner group relative cursor-pointer" onclick="openLightboxByIndex(4)">
+            <img src="images/img-0.png" alt="VC-Draw Welcome Screen and Offline Quick Start" class="w-full h-auto block">
+            <div class="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span class="px-4 py-2 rounded-full bg-white/95 text-blue-700 text-xs font-bold backdrop-blur-md border border-blue-200 shadow-lg">
+                Click to zoom full resolution
+              </span>
+            </div>
+          </div>
+          <div class="mt-5 flex flex-wrap items-center justify-between gap-4 text-xs">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">Instant Onboarding</span>
+              <span class="text-slate-700 font-medium">Create blank diagrams, browse templates, open .vcdraw / draw.io XML / Mermaid files, or explore sample architecture</span>
+            </div>
+            <div class="text-slate-500 font-mono">
+              Security: <span class="text-emerald-700 font-semibold">100% Offline · Zero Cloud</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Interoperability & Format Ecosystem Spotlight -->
+  <section id="interop" class="scroll-mt-24 py-20 px-6 border-t border-slate-200/80 bg-white/70 relative">
+    <div class="max-w-6xl mx-auto">
+      <div class="studio-card rounded-3xl p-8 sm:p-12 relative overflow-hidden border border-blue-200/80 reveal-item">
+        <div class="absolute -top-24 -right-24 w-96 h-96 aura-blue rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center relative z-10">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold mb-4 border border-blue-200">
+              Open Interoperability &amp; Multi-Format Export
+            </div>
+            <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              Import draw.io, Mermaid &amp; CSV. Export Anywhere.
+            </h2>
+            <p class="text-sm sm:text-base text-slate-600 mt-4 leading-relaxed">
+              Your diagrams belong to you—never locked in a proprietary cloud format. Open existing <code class="font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">.drawio</code> XML files, parse Mermaid flowchart syntax or CSV datasets directly into connected graphs, and export crisp deliverables.
+            </p>
+
+            <div class="mt-6 space-y-3 text-xs sm:text-sm text-slate-700 font-medium">
+              <div class="flex items-center gap-3">
+                <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">✓</span>
+                <span>Full import &amp; export compatibility with <strong>draw.io XML</strong> (<code class="font-mono text-xs text-slate-600">.drawio</code>, <code class="font-mono text-xs text-slate-600">.xml</code>)</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">✓</span>
+                <span>Native <strong>Mermaid</strong> flowchart parser (<code class="font-mono text-xs text-slate-600">graph TD</code>) &amp; <strong>CSV</strong> node/edge import</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">✓</span>
+                <span>Export <strong>PNG / JPEG (up to 4x)</strong>, scalable <strong>SVG</strong>, <strong>PDF</strong> (jsPDF), standalone <strong>HTML</strong>, <strong>JSON</strong> &amp; <strong>.vcdraw</strong></span>
+              </div>
+            </div>
+
+            <!-- Export Format Badges -->
+            <div class="mt-7 flex flex-wrap gap-2">
+              <span class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-mono font-semibold text-slate-700">.vcdraw</span>
+              <span class="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-xs font-mono font-semibold text-blue-700">.drawio / .xml</span>
+              <span class="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs font-mono font-semibold text-indigo-700">SVG Vector</span>
+              <span class="px-3 py-1.5 rounded-xl bg-sky-50 border border-sky-200 text-xs font-mono font-semibold text-sky-700">PNG / JPEG 4x</span>
+              <span class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-mono font-semibold text-emerald-700">PDF &amp; HTML</span>
+            </div>
+          </div>
+
+          <!-- Interactive Format Preview Switcher -->
+          <div class="rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden text-xs">
+            <div class="flex items-center justify-between px-4 py-3 bg-slate-950/90 border-b border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                <span id="interop-filename" class="ml-2 font-mono text-[11px] text-slate-300">order-flow.mmd</span>
+              </div>
+              <div class="flex items-center gap-1 bg-slate-800/80 p-0.5 rounded-lg">
+                <button onclick="switchInterop('mermaid')" id="interop-btn-mermaid" class="px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold bg-blue-600 text-white cursor-pointer transition-colors">Mermaid</button>
+                <button onclick="switchInterop('drawio')" id="interop-btn-drawio" class="px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold text-slate-400 hover:text-white cursor-pointer transition-colors">draw.io XML</button>
+                <button onclick="switchInterop('csv')" id="interop-btn-csv" class="px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold text-slate-400 hover:text-white cursor-pointer transition-colors">CSV</button>
+              </div>
+            </div>
+
+            <div class="p-5 font-mono text-[11px] leading-relaxed text-slate-200 min-h-[210px]">
+              <pre id="interop-code" class="overflow-x-auto text-sky-300"></pre>
+            </div>
+
+            <!-- Live Parsed Flow Mini-Bar -->
+            <div class="px-5 py-3 bg-slate-950/70 border-t border-slate-800 flex items-center justify-between text-[11px]">
+              <span class="text-slate-400 font-mono">VC-Draw Parser</span>
+              <span class="inline-flex items-center gap-1.5 text-emerald-400 font-mono font-semibold">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Ready for 1-Click Canvas Generation
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Productivity Shortcuts Matrix -->
+  <section id="shortcuts" class="scroll-mt-24 py-20 px-6 border-t border-slate-200/80 relative">
+    <div class="max-w-6xl mx-auto">
+
+      <div class="text-center max-w-2xl mx-auto mb-14 reveal-item">
+        <span class="inline-block text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200/70 px-3 py-1 rounded-full mb-3">
+          Productivity Shortcuts
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          Built for Speed &amp; Muscle Memory
+        </h2>
+        <p class="text-sm sm:text-base text-slate-600 mt-3">
+          Familiar desktop hotkeys across diagramming, grouping, zooming, and file management. Press <code class="font-mono text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">F1</code> inside the app anytime for the full reference.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs reveal-item">
+        <div class="shortcut-row p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-between hover:border-blue-300 transition-colors">
+          <span class="text-slate-700 font-sans font-semibold">New Blank Diagram</span>
+          <kbd class="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 font-bold">Ctrl + N</kbd>
+        </div>
+
+        <div class="shortcut-row p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-between hover:border-blue-300 transition-colors">
+          <span class="text-slate-700 font-sans font-semibold">Open / Import Diagram</span>
+          <kbd class="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 font-bold">Ctrl + O</kbd>
+        </div>
+
+        <div class="shortcut-row p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-between hover:border-blue-300 transition-colors">
+          <span class="text-slate-700 font-sans font-semibold">Save Diagram (.vcdraw)</span>
+          <kbd class="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 font-bold">Ctrl + S</kbd>
+        </div>
+
+        <div class="shortcut-row p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-between hover:border-blue-300 transition-colors">
+          <span class="text-slate-700 font-sans font-semibold">Undo / Redo</span>
+          <kbd class="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 font-bold">Ctrl + Z / Y</kbd>
+        </div>
+
+        <div class="shortcut-row p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-between hover:border-blue-300 transition-colors">
+          <span class="text-slate-700 font-sans font-semibold">Duplicate Selected</span>
+          <kbd class="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 font-bold">Ctrl + D</kbd>
+        </div>
+
+        <div class="shortcut-row p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-between hover:border-blue-300 transition-colors">
+          <span class="text-slate-700 font-sans font-semibold">Group / Ungroup</span>
+          <kbd class="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 font-bold">Ctrl + G</kbd>
+        </div>
+
+        <div class="shortcut-row p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-between hover:border-blue-300 transition-colors">
+          <span class="text-slate-700 font-sans font-semibold">Smooth Zoom</span>
+          <kbd class="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 font-bold">Ctrl + Wheel</kbd>
+        </div>
+
+        <div class="shortcut-row p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-between hover:border-blue-300 transition-colors">
+          <span class="text-slate-700 font-sans font-semibold">Pan Canvas Freely</span>
+          <kbd class="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 font-bold">Space + Drag</kbd>
+        </div>
+
+        <div class="shortcut-row p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-between hover:border-blue-300 transition-colors">
+          <span class="text-slate-700 font-sans font-semibold">Shortcuts Reference</span>
+          <kbd class="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 font-bold">F1</kbd>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 7. Architecture & Technology Stack -->
+  <section id="architecture" class="scroll-mt-24 py-20 px-6 border-t border-slate-200/80 bg-white/70 relative">
+    <div class="max-w-6xl mx-auto">
+
+      <div class="text-center max-w-2xl mx-auto mb-14 reveal-item">
+        <span class="inline-block text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200/70 px-3 py-1 rounded-full mb-3">
+          Under The Hood
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          Modern Desktop Architecture
+        </h2>
+        <p class="text-sm sm:text-base text-slate-600 mt-3">
+          Built with production-grade TypeScript tooling, isolated Electron runtime security, and crisp vector rendering.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="studio-card rounded-3xl p-6 reveal-item" style="transition-delay: 50ms;">
+          <div class="text-blue-600 font-mono text-xs font-bold mb-3">01 // DIAGRAM ENGINE</div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">maxGraph + React 19</h3>
+          <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Powered by <code class="font-mono text-blue-700">@maxgraph/core v0.11</code> with React 19, TypeScript, Zustand 5 state management, Lucide icons, and Tailwind CSS 3.
+          </p>
+        </div>
+
+        <div class="studio-card rounded-3xl p-6 reveal-item" style="transition-delay: 110ms;">
+          <div class="text-emerald-700 font-mono text-xs font-bold mb-3">02 // DESKTOP RUNTIME</div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">Electron 34 Isolation</h3>
+          <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Secure context isolation with atomic local persistence via Electron IPC bridges, tested with Vitest and packaged for Windows via Electron Builder (NSIS + Portable).
+          </p>
+        </div>
+
+        <div class="studio-card rounded-3xl p-6 reveal-item" style="transition-delay: 170ms;">
+          <div class="text-indigo-600 font-mono text-xs font-bold mb-3">03 // DOCUMENT OUTPUT</div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">jsPDF &amp; High-DPI Raster</h3>
+          <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Generate multi-format outputs on-device using jsPDF for documents, clean scalable SVG, standalone HTML viewers, and up to 4x PNG/JPEG snapshots.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 8. Creator Spotlight & Credits (Exact Attribution from README.md) -->
+  <section id="creator" class="scroll-mt-24 py-20 px-6 border-t border-slate-200/80 relative">
+    <div class="max-w-4xl mx-auto">
+
+      <div class="studio-card rounded-3xl p-8 sm:p-12 relative overflow-hidden border border-blue-200/80 reveal-item">
+        <div class="absolute -top-12 -right-12 w-72 h-72 aura-blue rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="flex flex-col sm:flex-row items-center gap-8 relative z-10">
+
+          <!-- Creator Monogram Badge -->
+          <div class="w-24 h-24 rounded-3xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 p-1 shadow-xl shadow-blue-600/25 flex items-center justify-center shrink-0">
+            <div class="w-full h-full bg-white rounded-[20px] flex items-center justify-center">
+              <span class="font-extrabold text-3xl tracking-tight bg-gradient-to-br from-blue-600 to-indigo-600 bg-clip-text text-transparent select-none">VA</span>
+            </div>
+          </div>
+
+          <!-- Creator Details -->
+          <div class="text-center sm:text-left flex-1">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold mb-2.5 border border-blue-200">
+              Creative UX Director · AI-Native UX Architect · Design Director
+            </div>
+
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Venkatesh Ammireddy</h2>
+
+            <p class="text-sm text-slate-600 mt-2.5 leading-relaxed">
+              Designed and architected VC-Draw to deliver an independent, open-source, 100% offline alternative to cloud diagramming tools—combining tactile UX craftsmanship, maxGraph vector performance, and strict local privacy.
+            </p>
+
+            <div class="mt-6 flex flex-wrap items-center justify-center sm:justify-start gap-3">
+              <a href="https://venkateshcreations.github.io/portfolio/" target="_blank" rel="noopener noreferrer"
+                 class="btn-primary-shimmer px-5 py-2.5 rounded-full text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25 hover:shadow-lg hover:shadow-blue-600/35 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                <span>View Portfolio Website</span>
+                <svg class="w-3.5 h-3.5 fill-none stroke-current" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+
+              <a href="https://github.com/venkateshcreations" target="_blank" rel="noopener noreferrer"
+                 class="px-5 py-2.5 rounded-full text-xs font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 shadow-sm transition-all flex items-center gap-2">
+                <span>Venkatesh Creations GitHub</span>
+                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 9. Bottom Download / Call-to-Action Banner -->
+  <section class="py-20 px-6 border-t border-slate-200/80 bg-gradient-to-b from-white to-slate-100/90 text-center relative">
+    <div class="max-w-4xl mx-auto flex flex-col items-center reveal-item">
+      <img src="images/favicon.svg" alt="VC-Draw Icon" class="w-16 h-16 mb-5 rounded-2xl shadow-xl shadow-blue-600/20 animate-float-slow">
+      <span class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold mb-4 border border-amber-200">
+        Under Active Testing · Public Release Coming Soon
+      </span>
+      <h2 class="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+        Ready to Diagram Without Cloud Lock-In?
+      </h2>
+      <p class="text-sm sm:text-base text-slate-600 mt-4 max-w-xl leading-relaxed">
+        VC-Draw is currently under testing and final QA. Both the Windows NSIS Installer (<code class="font-mono text-xs text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200">VC-Draw Setup 1.0.0.exe</code>) and Portable Executable will be available soon under the MIT License.
+      </p>
+
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <button onclick="showReleaseModal('VC-Draw Setup 1.0.0.exe &amp; Portable')"
+           class="btn-primary-shimmer px-7 py-4 rounded-full text-sm font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 text-white shadow-xl shadow-blue-600/25 hover:shadow-2xl hover:shadow-blue-600/35 hover:-translate-y-0.5 transition-all flex items-center gap-2.5 cursor-pointer">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+          </svg>
+          <span>Get VC-Draw (Windows)</span>
+          <span class="text-[10px] uppercase font-mono px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/25">Coming Soon</span>
+        </button>
+
+        <a href="https://venkateshcreations.github.io/portfolio/" target="_blank" rel="noopener noreferrer"
+           class="px-7 py-4 rounded-full text-sm font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-blue-300 shadow-sm transition-all flex items-center gap-2">
+          <span>Visit Creator Portfolio</span>
+          <svg class="w-4 h-4 text-blue-600 fill-none stroke-current" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. Footer -->
+  <footer class="py-10 px-6 border-t border-slate-200 text-xs text-slate-500 bg-white">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+        <img src="images/favicon.svg" alt="VC-Draw" class="w-6 h-6 rounded-md">
+        <span class="font-bold text-slate-900">VC-Draw</span>
+        <span class="text-slate-300">|</span>
+        <span>Designed &amp; Engineered by <a href="https://venkateshcreations.github.io/portfolio/" target="_blank" rel="noopener noreferrer" class="text-blue-600 font-semibold hover:underline">Venkatesh Ammireddy</a></span>
+        <span class="text-slate-300">|</span>
+        <span>MIT License</span>
+      </div>
+
+      <div class="flex items-center gap-6 font-medium text-slate-600">
+        <a href="#features" class="hover:text-blue-600 transition-colors">Features</a>
+        <a href="#showcase" class="hover:text-blue-600 transition-colors">Interface Tour</a>
+        <a href="#interop" class="hover:text-blue-600 transition-colors">Import &amp; Export</a>
+        <a href="https://venkateshcreations.github.io/portfolio/" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 transition-colors">Portfolio</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 11. Windows Release & Build Modal -->
+  <div id="release-modal" class="fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-sm hidden items-center justify-center p-4" onclick="if (event.target.id === 'release-modal') closeReleaseModal()">
+    <div class="modal-pop bg-white rounded-3xl p-8 max-w-md w-full border border-slate-200 shadow-2xl relative text-center">
+
+      <button onclick="closeReleaseModal()" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-800 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Close modal">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+
+      <div class="w-16 h-16 rounded-2xl mx-auto mb-5 shadow-lg shadow-blue-600/20 overflow-hidden">
+        <img src="images/favicon.svg" alt="VC-Draw" class="w-full h-full">
+      </div>
+
+      <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold mb-3 border border-amber-200">
+        Under Testing · Coming Soon
+      </div>
+
+      <h3 id="modal-release-title" class="text-2xl font-extrabold text-slate-900">Coming Soon!</h3>
+
+      <p class="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+        VC-Draw v1.0.0 is currently under testing and final QA. The public Windows NSIS installer, standalone portable executable, and GitHub release are launching soon.
+      </p>
+
+      <div class="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs font-mono text-slate-600 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500">Status</span>
+          <span class="text-amber-700 font-bold">Under Testing (Pre-Release)</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500">Installer</span>
+          <span class="text-slate-900 font-semibold">VC-Draw Setup 1.0.0.exe</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500">Portable</span>
+          <span class="text-slate-900 font-semibold">VC-Draw 1.0.0.exe</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500">License</span>
+          <span class="text-emerald-700 font-bold">MIT Open Source</span>
+        </div>
+      </div>
+
+      <div class="mt-6 flex flex-col gap-2.5">
+        <a href="https://venkateshcreations.github.io/portfolio/" target="_blank" rel="noopener noreferrer"
+           class="w-full py-3 rounded-full text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-95 shadow-md shadow-blue-600/25 transition-all flex items-center justify-center gap-2">
+          <span>Follow Updates on Creator Portfolio</span>
+          <svg class="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </a>
+
+        <button onclick="closeReleaseModal()" class="w-full py-2.5 rounded-full text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer">
+          Got It, Thanks!
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 12. Fullscreen Lightbox Modal (with Prev/Next Navigation) -->
+  <div id="lightbox-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4" onclick="if (event.target.id === 'lightbox-modal') closeLightbox()">
+    <div class="modal-pop relative max-w-7xl w-full max-h-[92vh] flex flex-col items-center">
+
+      <div class="w-full flex items-center justify-between pb-3 text-xs text-white">
+        <div class="flex items-center gap-3">
+          <span id="lightbox-counter" class="px-2.5 py-1 rounded-full bg-white/15 font-mono text-[11px]">1 / 5</span>
+          <span id="lightbox-caption" class="font-bold text-sm"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="stepLightbox(-1)" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition-colors cursor-pointer" aria-label="Previous screenshot">
+            Prev
+          </button>
+          <button onclick="stepLightbox(1)" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition-colors cursor-pointer" aria-label="Next screenshot">
+            Next
+          </button>
+          <button onclick="closeLightbox()" class="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/15 transition-colors cursor-pointer" aria-label="Close lightbox">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="rounded-2xl overflow-hidden border border-white/25 shadow-2xl bg-white max-h-[84vh] flex items-center justify-center">
+        <img id="lightbox-img" src="" alt="VC-Draw Screenshot Preview" class="max-w-full max-h-[82vh] object-contain">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Screenshot Catalog for Lightbox Carousel
+    const screenshots = [
+      { src: 'images/img-1.png', caption: 'VC-Draw — Cloud Microservices Architecture & maxGraph Inspector' },
+      { src: 'images/img-5.png', caption: 'VC-Draw — Interactive Whiteboard Mode & Sticky Notes' },
+      { src: 'images/img-2.png', caption: 'VC-Draw — Flowchart Template, Native Menus & 36 Shape Libraries' },
+      { src: 'images/img-4.png', caption: 'VC-Draw — Diagram Template Gallery' },
+      { src: 'images/img-0.png', caption: 'VC-Draw — Offline Welcome Modal & Quick Start' }
+    ];
+    let currentLightboxIndex = 0;
+
+    // Showcase Tabs
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.add('hidden');
+        el.classList.remove('block', 'tab-panel-animate');
+      });
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.setAttribute('aria-selected', 'false');
+        btn.className = 'tab-btn px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer';
+      });
+
+      const activeContent = document.getElementById('content-' + tabId);
+      if (activeContent) {
+        activeContent.classList.remove('hidden');
+        activeContent.classList.add('block');
+        void activeContent.offsetWidth;
+        activeContent.classList.add('tab-panel-animate');
+      }
+
+      const activeBtn = document.getElementById('tab-' + tabId);
+      if (activeBtn) {
+        activeBtn.setAttribute('aria-selected', 'true');
+        activeBtn.className = 'tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25 cursor-pointer';
+      }
+    }
+
+    // Interoperability Format Switcher
+    const interopSamples = {
+      mermaid: {
+        filename: 'order-flow.mmd',
+        code: `graph TD
+  A[Start Order Process] --> B[Validate Credentials & Cart]
+  B --> C{Payment Approved?}
+  C -->|Yes| D[Dispatch Warehouse Order]
+  C -->|No| E[Notify Payment Error]
+  D --> F[Order Complete]`
+      },
+      drawio: {
+        filename: 'architecture.drawio',
+        code: `<mxfile host="VC-Draw" version="1.0.0">
+  <diagram name="Cloud Microservices">
+    <mxGraphModel grid="1" gridSize="10">
+      <root>
+        <mxCell id="gw" value="API Gateway" style="rounded=1;fillColor=#f5f3ff;" vertex="1"/>
+        <mxCell id="db" value="PostgreSQL Cluster" style="shape=cylinder3;" vertex="1"/>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>`
+      },
+      csv: {
+        filename: 'services-topology.csv',
+        code: `source,target,protocol,label
+Web & Mobile Clients,Application Load Balancer,HTTPS,Edge Ingress
+Application Load Balancer,API Gateway,HTTPS,Rate Limit & Auth
+API Gateway,Auth Service,gRPC,Go / JWT
+API Gateway,Order Service,gRPC,Node.js
+Order Service,PostgreSQL Primary,TCP,Read/Write`
+      }
+    };
+
+    function switchInterop(format) {
+      const sample = interopSamples[format];
+      if (!sample) return;
+      document.getElementById('interop-filename').textContent = sample.filename;
+      document.getElementById('interop-code').textContent = sample.code;
+
+      ['mermaid', 'drawio', 'csv'].forEach(key => {
+        const btn = document.getElementById('interop-btn-' + key);
+        if (key === format) {
+          btn.className = 'px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold bg-blue-600 text-white cursor-pointer transition-colors';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold text-slate-400 hover:text-white cursor-pointer transition-colors';
+        }
+      });
+    }
+    switchInterop('mermaid');
+
+    // Mobile Menu
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      const burger = document.getElementById('hamburger-icon');
+      const close = document.getElementById('close-nav-icon');
+      if (!menu) return;
+      const isHidden = menu.classList.contains('hidden');
+      menu.classList.toggle('hidden', !isHidden);
+      burger.classList.toggle('hidden', isHidden);
+      close.classList.toggle('hidden', !isHidden);
+    }
+
+    // Release Modal
+    function showReleaseModal(title) {
+      const modal = document.getElementById('release-modal');
+      const titleEl = document.getElementById('modal-release-title');
+      if (titleEl && title) titleEl.textContent = title + ' • Coming Soon!';
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeReleaseModal() {
+      const modal = document.getElementById('release-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // Lightbox Carousel
+    function openLightboxByIndex(index) {
+      currentLightboxIndex = (index + screenshots.length) % screenshots.length;
+      const item = screenshots[currentLightboxIndex];
+      document.getElementById('lightbox-img').src = item.src;
+      document.getElementById('lightbox-caption').textContent = item.caption;
+      document.getElementById('lightbox-counter').textContent = (currentLightboxIndex + 1) + ' / ' + screenshots.length;
+      const modal = document.getElementById('lightbox-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function stepLightbox(delta) {
+      openLightboxByIndex(currentLightboxIndex + delta);
+    }
+
+    function closeLightbox() {
+      const modal = document.getElementById('lightbox-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // Scroll Progress & Navbar Elevation
+    const progressEl = document.getElementById('scroll-progress');
+    const navbarEl = document.getElementById('navbar-capsule');
+    function updateScrollEffects() {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? Math.min(window.scrollY / docHeight, 1) : 0;
+      if (progressEl) progressEl.style.transform = `scaleX(${progress})`;
+      if (navbarEl) {
+        if (window.scrollY > 30) {
+          navbarEl.classList.add('shadow-[0_14px_40px_-10px_rgba(37,99,235,0.18)]', 'border-blue-200/80');
+        } else {
+          navbarEl.classList.remove('shadow-[0_14px_40px_-10px_rgba(37,99,235,0.18)]', 'border-blue-200/80');
+        }
+      }
+    }
+    window.addEventListener('scroll', updateScrollEffects, { passive: true });
+    updateScrollEffects();
+
+    // IntersectionObserver Scroll Reveal
+    const revealItems = document.querySelectorAll('.reveal-item');
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+      revealItems.forEach(el => observer.observe(el));
+    } else {
+      revealItems.forEach(el => el.classList.add('is-visible'));
+    }
+
+    // Subtle 3D Tilt on Feature Cards & Hero Frame (Desktop pointer only)
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.querySelectorAll('.tilt-card').forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const rotateX = ((y - rect.height / 2) / (rect.height / 2)) * -3.5;
+          const rotateY = ((x - rect.width / 2) / (rect.width / 2)) * 3.5;
+          card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translate3d(0, -4px, 0)`;
+        });
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = '';
+        });
+      });
+
+      const heroFrame = document.getElementById('hero-frame');
+      if (heroFrame) {
+        heroFrame.addEventListener('mousemove', (e) => {
+          const rect = heroFrame.getBoundingClientRect();
+          const rotateX = (((e.clientY - rect.top) - rect.height / 2) / (rect.height / 2)) * -1.4;
+          const rotateY = (((e.clientX - rect.left) - rect.width / 2) / (rect.width / 2)) * 1.4;
+          heroFrame.style.transform = `perspective(1400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        });
+        heroFrame.addEventListener('mouseleave', () => {
+          heroFrame.style.transform = '';
+        });
+      }
+    }
+
+    // Keyboard Support for Lightbox & Modals
+    window.addEventListener('keydown', (e) => {
+      const lightboxOpen = !document.getElementById('lightbox-modal').classList.contains('hidden');
+      if (e.key === 'Escape') {
+        closeReleaseModal();
+        closeLightbox();
+      } else if (lightboxOpen && e.key === 'ArrowRight') {
+        stepLightbox(1);
+      } else if (lightboxOpen && e.key === 'ArrowLeft') {
+        stepLightbox(-1);
+      }
+    });
+  </script>
+
+</body>
+</html>

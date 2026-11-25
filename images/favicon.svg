@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="vc-grad" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="55%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <linearGradient id="vc-shine" x1="0" y1="0" x2="128" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#vc-grad)"/>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#vc-shine)"/>
+  <!-- Subtle connector node motif -->
+  <circle cx="28" cy="28" r="5" fill="#93C5FD" fill-opacity="0.85"/>
+  <circle cx="100" cy="100" r="5" fill="#6EE7B7" fill-opacity="0.9"/>
+  <path d="M33 28 H92 Q100 28 100 36 V95" stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="2.5" stroke-dasharray="5 4" stroke-linecap="round"/>
+  <!-- Crisp VC Monogram -->
+  <text x="64" y="80" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif" font-weight="800" font-size="48" letter-spacing="-2" fill="#FFFFFF">VC</text>
+</svg>
